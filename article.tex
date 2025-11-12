@@ -1,0 +1,240 @@
+\documentclass[12pt]{spieman}  % 12pt font required by SPIE
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{tocloft}
+\usepackage{lineno}
+\linenumbers
+
+\title{MKID Readout System for 3I Atlas: System Block Diagram, Inductance Design, and Sampling Requirements}
+
+\author[a]{Isaac Smith}
+\affil[a]{Arizona State University, School of Earth and Space Exploration, 781 Terrace Mall, Tempe, Arizona, USA}
+\affil[b]{Lost Space Industries, 781 Terrace Mall, Tempe, Arizona, USA}
+
+\renewcommand{\cftdotsep}{\cftnodots}
+\cftpagenumbersoff{figure}
+\cftpagenumbersoff{table}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The discovery of \textit{3I Atlas} represents the newest addition to a small but growing class of interstellar visitors to our Solar System, following \textit{1I/‘Oumuamua} in 2017 and \textit{2I/Borisov} in 2019. Unlike its predecessors—one a non-cometary body of uncertain composition and the other a clearly active comet—\textit{3I Atlas} exhibits mixed morphological and spectral characteristics that may provide new insight into the chemical diversity of extrasolar small bodies and the effects of interstellar travel on their composition. Understanding its molecular makeup is critical for constraining the physical and chemical conditions of other planetary systems and for assessing whether organic chemistry capable of supporting life can persist beyond the Solar System.
+
+Recent spectroscopic observations from the James Webb Space Telescope (JWST) have identified the presence of several volatile species within \textit{3I Atlas}, including water (H$_2$O), carbon dioxide (CO$_2$), methane (CH$_4$), ammonia (NH$_3$), and methanol (CH$_3$OH). These compounds are key biosignature candidates and form the basis of this investigation. This project proposes a microwave kinetic inductance detector (MKID) readout system designed to detect resonances corresponding to these molecular species on \textit{3I Atlas}. The design defines the system’s resonance parameters, sampling requirements, and FPGA-based signal-processing framework for subsequent modeling and hardware demonstration. By combining astrophysical motivation with signal-processing implementation, this work connects the broader search for life-bearing chemistry in interstellar objects—and the influence of interstellar travel on unshielded bodies lacking protective magnetospheres—to the advancement of MKID readout technology. Ultimately, this effort serves as a technological and analytical foundation for future missions aimed at detecting biosignatures in the subsurface plumes of Enceladus.
+\end{abstract}
+
+\keywords{MKID, FPGA readout, polyphase filterbank, digital downconversion, sampling theory, interstellar objects, JWST, Enceladus}
+
+{\noindent \footnotesize *Corresponding author: \linkable{ismith43@asu.edu}}
+
+\begin{spacing}{2}
+
+\section{Introduction}
+Interstellar objects represent a rare and scientifically valuable class of planetary bodies that provide direct evidence of material originating beyond our Solar System. The first two known examples—\textit{1I/‘Oumuamua} in 2017 and \textit{2I/Borisov} in 2019—revealed strikingly different characteristics: the former appearing as a non-cometary, possibly metallic or rocky object, and the latter as an active comet with abundant volatiles. The recent discovery of \textit{3I Atlas} has introduced a third example whose mixed spectral and morphological properties suggest a transitional nature between the two. Understanding the chemical composition of such interstellar bodies is critical for assessing the diversity of extrasolar materials and for testing whether complex organic chemistry can persist through the harsh radiation environment of interstellar space.
+
+Early spectroscopic observations of \textit{3I Atlas} from the James Webb Space Telescope (JWST) identified distinct absorption features associated with water (H$_2$O), carbon dioxide (CO$_2$), methane (CH$_4$), ammonia (NH$_3$), and methanol (CH$_3$OH)—molecules that are key tracers of prebiotic chemistry and potential biosignatures. These detections motivate the development of a sensitive, frequency-division multiplexed detection system capable of resolving individual molecular resonances within a compact readout architecture.
+
+\subsection{Microwave Kinetic Inductance Detectors (MKIDs)}
+Microwave Kinetic Inductance Detectors (MKIDs) are superconducting resonators that exploit the dependence of kinetic inductance on the density of Cooper pairs. When incident photons with sufficient energy are absorbed by the superconducting film, Cooper pairs are broken, increasing the kinetic inductance and shifting the resonant frequency of the circuit. Each MKID functions as an LC resonator with a unique resonance defined by
+\begin{equation}
+f_0 = \frac{1}{2\pi\sqrt{LC}},
+\end{equation}
+where $L$ is the total inductance and $C$ is the capacitance of the resonator.
+Arrays of MKIDs are naturally suited for frequency-division multiplexing (FDM) because each resonator can be tuned to a distinct $f_0$ and read out over a common transmission line. The readout electronics measure the phase and amplitude changes of each tone through in-phase ($I$) and quadrature ($Q$) demodulation, with the instantaneous phase given by
+\begin{equation}
+\phi(t) = \tan^{-1}\!\left(\frac{Q(t)}{I(t)}\right).
+\end{equation}
+Such architectures are highly scalable and have been successfully demonstrated in space-qualified systems for missions such as the Habitable Worlds Observatory (HWO) and Origins Space Telescope (OST)~\cite{jamisonhooks2025}.
+
+\subsection{Resonance Design and Inductance Calculation}
+Five resonator frequencies corresponding to the JWST-identified molecular features were selected: 14~MHz, 25~MHz, 61~MHz, 101~MHz, and 110.5~MHz. The associated capacitances, chosen to achieve practical fabrication and matching conditions, are given in Table~\ref{tab:inductance}. The inductance required for each MKID is computed as
+\begin{equation}
+L = \frac{1}{(2\pi f_0)^2 C},
+\end{equation}
+where $L$ is the inductance (H), $f_0$ is the resonant frequency (Hz), and $C$ is the capacitance (F).
+
+\begin{table}[ht]
+\caption{Inductance values required for the specified MKID resonances using $L=\big[(2\pi f_0)^2 C\big]^{-1}$.}
+\label{tab:inductance}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Target Frequency (MHz) & Capacitance ($\mu$F) & Inductance $L$ (H) & Inductance $L$ (pH) \\
+\hline
+14.0  & 12   & $1.08\times10^{-11}$ & 10.8 \\
+25.0  & 6    & $6.76\times10^{-12}$ & 6.76 \\
+61.0  & 7.5  & $9.08\times10^{-13}$ & 0.91 \\
+101.0 & 9.1  & $2.73\times10^{-13}$ & 0.27 \\
+110.5 & 13   & $1.60\times10^{-13}$ & 0.16 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Minimum Sampling Frequency and Theoretical Justification}
+To detect all five molecular resonances simultaneously using a single analog-to-digital converter (ADC), the system must satisfy the Nyquist sampling criterion,
+\begin{equation}
+F_s \geq 2 f_{\max},
+\end{equation}
+where $f_{\max}$ is the highest signal frequency of interest. Given $f_{\max}=110.5~\text{MHz}$, the minimum theoretical sampling rate is
+\begin{equation}
+F_{s,\min} = 2 \times 110.5~\text{MHz} = 221~\text{MHz}.
+\end{equation}
+In practice, a modest guard band is applied to accommodate filter roll-off and to simplify digital clock synthesis. Therefore, a sampling frequency in the range of 250--300~MHz is selected. This rate ensures unaliased digitization of all five resonances while maintaining sufficient oversampling for digital downconversion and FPGA-based channelization, consistent with space-qualified MKID approaches~\cite{jamisonhooks2025}.
+
+\subsection{System Architecture Overview}
+Figure~\ref{fig:block} shows the complete signal chain. The MKID array converts the incoming science signal from 3I Atlas into frequency-multiplexed resonant tones. After amplification and band-limiting (14--110.5~MHz, approximately 96.5~MHz science bandwidth), the analog signal is digitized by an ADC and processed in an FPGA implementing a digital downconversion (DDC) chain of mixing, filtering, and decimation stages.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{Block_Diagram.png}
+\caption{System block diagram of the MKID readout chain for 3I Atlas showing the science signal flow from the MKID detector array through the analog front end and ADC to the FPGA-based digital signal-processing stages.}
+\label{fig:block}
+\end{figure}
+
+\subsection{Science Signal Bandwidth Illustration}
+The frequency-domain spectrum of the science signal is shown in Fig.~\ref{fig:bandwidth}. The five discrete resonances correspond to molecular signatures of H$_2$O, CO$_2$, CH$_4$, NH$_3$, and CH$_3$OH, spanning a total science bandwidth of approximately 96.5~MHz.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{Science_Bandwidth.png}
+\caption{Science signal spectrum for 3I Atlas showing the five molecular resonance frequencies and the total bandwidth $BW_{\text{science}}=96.5~\text{MHz}$. The selected sampling rate $F_s=250~\text{MHz}$ satisfies the Nyquist criterion.}
+\label{fig:bandwidth}
+\end{figure}
+
+% =========================================
+% Lab 2: Digital Frequency Analysis and FFT Simulation
+% =========================================
+\section{Digital Frequency Analysis and FFT Simulation}
+\label{sec:lab2}
+
+This section extends the MKID readout design by modeling the post-ADC digital signal-processing chain. In Lab~1, the system bandwidth (14--110.5~MHz), sampling rate (250~MHz), and five molecular resonance frequencies corresponding to JWST detections on 3I~Atlas were established. Lab~2 verifies that these tones can be recovered in the frequency domain using an $N$-point FFT and that the same processing can be implemented in a streaming, FPGA-style Simulink model.
+
+\subsection{Discrete Fourier Transform Background}
+After digitization, the MKID output is a discrete-time sequence $x[n]$ sampled at rate $F_s$. To separate the individual resonances, a discrete Fourier transform (DFT) of length $N$ is applied:
+\begin{equation}
+X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j 2 \pi kn / N}, \quad k = 0, 1, \dots, N-1.
+\end{equation}
+Each output bin $k$ corresponds to the discrete frequency
+\begin{equation}
+f_k = \frac{k F_s}{N},
+\end{equation}
+and the frequency spacing (resolution) is
+\begin{equation}
+\Delta f = \frac{F_s}{N}.
+\end{equation}
+With the values used in this lab, $F_s = 250~\text{MHz}$ and $N = 4096$, giving
+\begin{equation}
+\Delta f = \frac{250 \times 10^{6}}{4096} \approx 61~\text{kHz},
+\end{equation}
+which is sufficiently fine to place and identify five narrow tones inside the 96.5~MHz science band.
+
+The complex FFT output is converted to a real spectrum using
+\begin{equation}
+|X[k]| = \sqrt{(Real(X[k]))^2 + (Imag(X[k]))^2}.
+\end{equation}
+In the FPGA, this magnitude operation would typically be followed by averaging or accumulation to improve the signal-to-noise ratio, but for this simulation a single-frame magnitude is sufficient to confirm correct tone placement.
+
+\subsection{Digital System Parameters}
+Table~\ref{tab:lab2params} summarizes the digital parameters used for the Lab~2 simulations.
+
+\begin{table}[ht]
+\caption{Digital parameters for Lab~2 FFT simulation.}
+\label{tab:lab2params}
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+Quantity & Symbol & Value \\
+\hline
+Sampling frequency & $F_s$ & 250~MHz \\
+FFT length & $N$ & 4096 samples \\
+Frequency resolution & $\Delta f$ & 61~kHz \\
+Science bandwidth & $BW_{\text{science}}$ & 96.5~MHz \\
+Number of tones & -- & 5 \\
+Tone frequencies & -- & 14, 25, 61, 101, 110.5~MHz \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{MATLAB Frequency-Plan Validation}
+A MATLAB script was used to generate a composite time-domain signal consisting of five cosines at 14, 25, 61, 101, and 110.5~MHz. The signal was sampled at $F_s = 250$~MHz for one FFT frame of $N=4096$ samples and transformed with the built-in \texttt{fft()} function. The resulting one-sided magnitude spectrum showed five distinct peaks at the expected frequencies. Each peak aligned with an FFT bin once the bin index
+\begin{equation}
+k = \text{round}\left(\frac{f_{\text{tone}}}{\Delta f}\right)
+\end{equation}
+was computed. This confirmed that the frequency plan derived in Lab~1 is compatible with a practical FFT-based readout.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{FFT_Spectrum.png}
+\caption{MATLAB FFT of the simulated MKID readout signal sampled at 250~MHz.  
+Five narrow peaks at 14, 25, 61, 101, and 110.5~MHz correspond to the expected molecular resonances of  
+H$_2$O, CO$_2$, CH$_4$, NH$_3$, and CH$_3$OH.}
+\label{fig:fft_spectrum}
+\end{figure}
+
+\subsection{Simulink FPGA-Style Model}
+To mirror the firmware implementation, a Simulink model was built using streaming blocks with \texttt{data} and \texttt{valid} ports (Fig.~\ref{fig:simulink_fft}). A numerically controlled oscillator (NCO) block synthesizes a discrete-time sinusoid at a selected test frequency. The NCO output is fanned out to a measurement scope and to an FFT block configured for streaming operation. The FFT output is passed to a Complex-to-Magnitude-Angle block, which produces the magnitude spectrum and forwards the corresponding \texttt{valid} signal. Two output ports (\texttt{out.SciInfo} and \texttt{out.SciInfo\_Valid}) are logged to the workspace for post-processing.
+
+The model therefore implements the minimal digital readout path:
+\begin{enumerate}
+\item NCO tone generation (represents one MKID resonance),
+\item streaming FFT,
+\item magnitude detection,
+\item valid-based handshaking to match FPGA flow.
+\end{enumerate}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{Simulink_FFT_Model.png}
+\caption{Simulink implementation of the streaming digital readout. An NCO generates the test tone; the FFT block performs the spectral transform; and a Complex-to-Magnitude-Angle block produces the final spectrum along with a valid signal. (Replace with exported Simulink image.)}
+\label{fig:simulink_fft}
+\end{figure}
+
+\subsection{Simulink Spectrum and Post-Processing}
+During simulation, the Spectrum Analyzer displayed the NCO test tone centered at $\pm4$~kHz, confirming that the FFT and magnitude blocks were functioning correctly (Fig.~\ref{fig:spectrum_analyzer}).  
+The streaming outputs were then captured to the MATLAB workspace as \texttt{out.SciInfo} and \texttt{out.SciInfo\_Valid} and analyzed with a post-processing script.  
+A single valid FFT frame was extracted and plotted versus frequency (Fig.~\ref{fig:simulink_post}), showing a clear peak at 4~kHz.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\linewidth]{SpectrumAnalyzer_4kHz.png}
+\caption{Spectrum Analyzer output from the Simulink streaming model showing the 4~kHz NCO test tone.  
+The symmetrical peaks around DC confirm correct operation of the FFT and magnitude blocks at a 128~kHz sample rate.}
+\label{fig:spectrum_analyzer}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{Simulink_PostProcess.png}
+\caption{MATLAB post-processing of the Simulink output \texttt{out.SciInfo}, confirming a single FFT peak near 4~kHz.  
+This validates the data-capture and post-analysis routine used for streaming verification.}
+\label{fig:simulink_post}
+\end{figure}
+
+\subsection{Results and Discussion}
+Both the offline MATLAB FFT and the streaming Simulink model show that the selected sampling frequency of 250~MHz and FFT length of 4096 provide adequate spectral resolution (61~kHz) to detect and separate all five molecular tones that define the science band for 3I~Atlas.  
+The Simulink version additionally demonstrates that the same processing can be expressed in an FPGA-friendly form using streaming interfaces and explicit block latencies.  
+The lower-frequency 4~kHz test confirmed that the FFT path, valid handshaking, and magnitude conversion blocks behave as expected.  
+Together, these results verify that the digital portion of the MKID readout designed in Lab~1 can be realized as a practical, real-time signal-processing chain suitable for FPGA implementation.
+
+\subsection{Transition to Future Work}
+The results of Lab 2 establish a verified digital readout chain that can be directly extended to polyphase filter-bank and digital downconversion architectures. These topics will be addressed in Lab 3, where the focus will shift to implementing real-time spectral channelization and decimation suitable for FPGA deployment.
+
+
+\subsection*{Disclosures}
+The author declares that there are no financial interests, commercial affiliations, or other potential conflicts of interest that could have influenced the objectivity of this research or the writing of this paper.
+
+\subsection*{Code, Data, and Materials Availability}
+All data and figure-generation scripts will be made available in a public repository upon publication.
+
+\subsection*{Acknowledgments}
+The author thanks the School of Earth and Space Exploration at Arizona State University for supporting this work.
+
+\bibliography{report}
+\bibliographystyle{spiejour}
+
+\end{spacing}
+\end{document}
